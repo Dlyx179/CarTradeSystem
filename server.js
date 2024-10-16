@@ -5,10 +5,12 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 const port = 3000;
+const loginController = require('./controllers/loginCtrl.js');
 
 // Enable CORS
 app.use(cors());
 app.use(express.json()); // For parsing application/json
+
 
 // Test the connection
 pool.getConnection((err, connection) => {
@@ -27,6 +29,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// route for login
+app.post('/login', loginController.checkLogin); // delegate login logic to the controller
+
+
 
 // Dynamically import all route files from the 'routes' directory
 const routesPath = path.join(__dirname, 'routes');

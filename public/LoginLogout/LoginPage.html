@@ -80,8 +80,8 @@
     </style>
 
     <!-- Javascript -->
-    <script>
-
+    <script src="loginCtrl.js">
+        
     </script>
 </head>
 <body>
@@ -89,7 +89,7 @@
         <header>
             <h1>Welcome to CarTakers</h1>
         </header>
-        <form action="">
+        <form action="/login" method="post">
             <h1>Login</h1>
             <div class="form-group">
                 <label for="">Login As</label>
@@ -109,7 +109,7 @@
                 <label for="">Password</label>
                 <input type="password" class="form-control" required>
             </div>
-            <button class="btn" onclick="loginBtn()">Login</button>
+            <button class="btn" type="submit">Login</button>
         </form>
     </div>
     
