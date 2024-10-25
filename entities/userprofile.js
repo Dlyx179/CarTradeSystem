@@ -31,16 +31,26 @@ class UserProfile {
         return this.#suspendStatus;
     }
 
-    async check_role(role) {
-        const query = 'SELECT * FROM UserProfile WHERE role = ?';
-        const [existingRoles] = await db.promise().query(query, [role]);
-
-        if (existingRoles.length > 0) {
-            return false;   // role already exist
+    async check_role(role, profileId = null) {
+        let query = 'SELECT * FROM UserProfile WHERE role = ?';
+        const params = [role];
+    
+        // If profileId is provided (for update), exclude this profile from the check
+        if (profileId) {
+            query += ' AND profile_id != ?';
+            params.push(profileId);
         }
-
-        return true;
+    
+        const [existingRoles] = await db.promise().query(query, params);
+    
+        // Return false if any matching role exists, except for the current profile
+        if (existingRoles.length > 0) {
+            return false;   // role already exists
+        }
+    
+        return true;  // role is available
     }
+    
 
     // create profile
     async createProfile(role, description) {
@@ -66,15 +76,14 @@ class UserProfile {
 
     // update profile
     async updateProfile(profileId, role, roleDesc) {
-        // check if updated role already exist
-        const existingRole = await this.check_role(role);
+        // Check if the updated role belongs to another profile
+        const roleIsValid = await this.check_role(role, profileId);
 
-        if (existingRole) {
+        if (roleIsValid) {
             const query = 'UPDATE UserProfile SET role = ?, roleDesc = ? WHERE profile_id = ?';
             await db.promise().query(query, [role, roleDesc, profileId]);
             return true;
-        }
-        else {
+        } else {
             return false;
         }
     }

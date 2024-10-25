@@ -1,16 +1,14 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
-const User = require('../entities/user');
+const User = require('../entities/User');
 
 class Admin extends User{
 
-    
     constructor(adminData = {}) {
         // call parent constructor to initoalize 
         super(adminData);
         
     }
-
 
     async check_email(email)
     {
@@ -43,8 +41,14 @@ class Admin extends User{
 
     }
 
-
-
+    async findById(userId) {
+        const query = 'SELECT * FROM User WHERE user_id = ?';
+        const [rows] = await db.promise().query(query, [userId]);
+    
+        // Assuming the user_id is unique, return the first user found or null
+        return rows.length > 0 ? rows[0] : null;
+    }
+    
     async getUserAccounts() {
 
         const query = 'SELECT * FROM User';
@@ -53,11 +57,34 @@ class Admin extends User{
 
     }
 
-    async updateAccount() {
+    async updateAccount(userId, email, password, username, phoneNumber, role) {
+        
+        // Check if an account with the provided email exists (this could be the current user's email or another user's)
+        const existingUser = await this.findByEmail(email);
 
+        // If the email exists and belongs to a different user, return an error
+        if (existingUser && existingUser.user_id !== Number(userId)) {
+            return false;   
+        }
+
+        // Hash the password 
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        // Get the profile ID for the role
+        const profileId = this.getProfileId(role);
+
+        // Perform the update
+        const query = 'UPDATE User SET email = ?, password_hash = ?, username = ?, phone = ?, profile_id = ? WHERE user_id = ?';
+        const [result] = await db.promise().query(query, [email, hashedPassword, username, phoneNumber, profileId, userId]);
+
+        return result.affectedRows > 0 ? true : false;
     }
 
-    async suspendAccount() {
+
+    async suspendAccount(user_id) {
+        const query = 'UPDATE User SET suspendStatus = ? WHERE user_id = ?';
+        const [result] = await db.promise().query(query, [true, user_id]);
+        return result.affectedRows > 0;
 
     }
 

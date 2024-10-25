@@ -175,6 +175,10 @@ function populateAccountTable(accounts) {
 
     accounts.forEach(account => {
       const row = document.createElement('tr');
+      row.setAttribute('data-user-id', account.user_id);
+
+      // check if the account is suspended
+      const isSuspended = account.suspendStatus; 
 
       // Populate table rows with account data
       row.innerHTML = `
@@ -182,10 +186,16 @@ function populateAccountTable(accounts) {
           <td><input type="text" class="form-control1" value="${account.email}" readonly></td>
           <td><input type="text" class="form-control1" value="${account.phone}" readonly></td>
           <td>
-              <button class="update-button" onclick="updateAccPageBtn('${account.user_id}')">Update</button>
-              <button class="suspend-button" onclick="suspendBtn('${account.user_id}')">Suspend</button>
+              ${isSuspended ? '' : `<button class="update-button" onclick="updateAccPageBtn('${account.user_id}')">Update</button>`}
+              ${isSuspended ? '' : ` <button class="suspend-button" onclick="suspendAccount('${account.user_id}')">Suspend</button>`}
+              ${isSuspended ? '<span class="suspended-label">Suspended</span>' : ''}
           </td>
       `;
+
+      // If the profile is suspended, gray out the row
+      if (isSuspended) {
+        row.classList.add('suspended'); // Add the suspended class to gray it out
+    }
 
       tableBody.appendChild(row);
     });
@@ -227,15 +237,48 @@ function performProfileSearch() {
 }
 
 /* Update Button - redirect to UpdateAccount page */
-function updateAccPageBtn(event){
-  document.location.href="./UpdateAccount.html";  // Use relative path
+function updateAccPageBtn(userId){
+  document.location.href=`./UpdateAccount.html?userId=${userId}`;  // Use relative path
 }
 
-/* Suspend Button - ViewProfile & ViewAccount */
-function suspendBtn(event) {
-  const card = event.target.closest('.card'); // Get the closest card element
-  card.classList.add('disabled');             // Add the 'disabled' class to the card
+/* Suspend Account */
+async function suspendAccount(userId) {
+  try {
+      const response = await fetch(`/SuspendAccountRoute/suspend/${userId}`, { 
+          method: 'PUT',
+          headers: {
+              'Content-Type': 'application/json',
+          }
+      });
+
+      // Log the response to see what is being returned
+      const responseText = await response.text();
+      console.log('Response:', responseText);
+
+      const data = JSON.parse(responseText); // Parse the response as JSON
+
+      if (data.success) {
+          alert('Account suspended');
+
+          const accountRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+          if (accountRow) {
+            accountRow.classList.add('suspended'); // Gray out the row
+
+            // Find the buttons and replace them with the "Suspended" label
+            const actionCell = accountRow.querySelector('td:last-child'); // Target the action buttons cell
+            actionCell.innerHTML = '<span class="suspended-label">Suspended</span>'; // Replace buttons with 'Suspended' label
+          } else {
+              console.error(`Row not found for user ID: ${userId}`);
+          }
+      } else {
+          alert('Failed to suspend account. Please try again.');
+      }
+  } catch (error) {
+      console.error('Error suspending account:', error);
+      alert('An error occurred while suspending the account.');
+  }
 }
+
 
 /* ---------------------------------- */
 /* ViewProfile JS */
@@ -314,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('updateAccount').addEventListener('click', updateAccountBtn);
 });
 
-function updateAccountBtn(event) {
+async function updateAccountBtn(event) {
   const form = document.getElementById('updateAccountForm');
   
   // Get input and textarea values
@@ -324,10 +367,16 @@ function updateAccountBtn(event) {
   const phoneNumber = document.getElementById('phoneNumber').value.trim();
   const password = document.getElementById('password').value.trim(); // Check to reject whitespace?
 
+  // get user id of row to be updated
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get('userId');
+
+  console.log(userId);
+
   // Check for empty or whitespace-only values
   if (role === "" || username === "" || email === "" || phoneNumber === "" || password === "") {
     event.preventDefault(); // Prevent form submission
-    alert('Both fields are required and cannot be empty or whitespace.'); // Custom alert
+    alert('All fields are required and cannot be empty or whitespace.'); // Custom alert
     return; // Exit the function
   }
 
@@ -336,9 +385,34 @@ function updateAccountBtn(event) {
     event.preventDefault(); // Prevent default only if the form is valid
 
     // Update account info...
+    try {
+      const response = await fetch(`/updateAccountRoute/updateAccount/${userId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId, email, password, username, phoneNumber, role  })
+      })
+      
+      const data = await response.json();
 
-    alert('User account updated!');
-    document.location.href = "./ViewAccount.html"; // Use relative path
+      if (data.success) {
+        console.log('Account updated successfully');
+        alert('User account updated!');
+        document.location.href = "./ViewAccount.html"; // Use relative path
+      }
+      else {
+        alert('Account cannot be updated. Please check your input.');
+      }
+    }
+
+    catch (err) {
+      console.error(err);
+      alert('An error occurred during update');
+    }
+    
+
+    
   }
 }
 
