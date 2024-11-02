@@ -171,22 +171,6 @@ class Carlisting {
 
         return listingsWithSellerEmail;
     }
-
-    // view all car listings
-    async viewAllCarListings() {
-
-        const query = 
-            `SELECT 
-                Carlisting.*, 
-                User.email AS agent_email
-            FROM
-                Carlisting
-            LEFT JOIN
-                User ON Carlisting.agent_id = User.user_id
-            `;
-        const [listings] = await db.promise().query(query);
-        return listings;
-    }
 }
 
 module.exports = Carlisting;
